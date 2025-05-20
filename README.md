@@ -44,12 +44,6 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## 🌐 Environment Variables
-Create a `.env` file in the Backend directory:
-```
-DATABASE_URL=sqlite:///contacts.db
-```
-
 ## 📱 Features in Detail
 1. **Home Page**
    - Professional introduction

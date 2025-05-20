@@ -12,7 +12,7 @@ const projectsData = [
         image: "https://picsum.photos/800/600?random=1", // We'll update this once you add a portfolio image
         tags: ["React", "CSS", "JavaScript"],
         links: {
-            github: "https://github.com/yourusername/portfolio",
+            github: "https://github.com/Poushali-02/Portfolio",
         }
     },
     {

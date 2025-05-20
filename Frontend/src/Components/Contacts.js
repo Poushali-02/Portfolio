@@ -9,26 +9,9 @@ const Contact = () => {
         message: ''
     });
 
-    const [status, setStatus] = useState(''); // form submission status
-    const [errors, setErrors] = useState({}); // form validation errors
-    const [canSubmit, setCanSubmit] = useState(true); // form submission state
-    const [isLoading, setIsLoading] = useState(false); // loading state
-
-    const validateField = (name, value) => {
-        switch(name) {
-            case 'email':
-                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                return !emailPattern.test(value) ? 'Please enter a valid email address' : null;
-            case 'name':
-                if (value.length < 2) return 'Name must be at least 2 characters long';
-                if (!/^[a-zA-Z\s]*$/.test(value)) return 'Name should only contain letters and spaces';
-                return null;
-            case 'message':
-                return validateContent(value);
-            default:
-                return null;
-        }
-    };
+    const [status, setStatus] = useState('');
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -36,44 +19,40 @@ const Contact = () => {
             ...prev,
             [name]: value
         }));
-
-        // Validate on change
-        const error = validateField(name, value);
-        setErrors(prev => ({
-            ...prev,
-            [name]: error || undefined
-        }));
-    };
-
-    const resetForm = () => {
-        setFormData({ name: '', email: '', message: '' });
-        setErrors({});
-        setStatus('');
-        setIsLoading(false);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!canSubmit || isLoading) {
-            setStatus('rate-limited');
+        console.log('Form submission started');
+        setErrors({});
+
+        // Basic validation
+        if (!formData.name || !formData.email || !formData.message) {
+            alert('Please fill in all fields');
             return;
         }
 
-        // Final validation of all fields
-        const newErrors = {};
-        Object.keys(formData).forEach(field => {
-            const error = validateField(field, formData[field]);
-            if (error) newErrors[field] = error;
-        });
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
+        // Email validation
+        const emailRegex = /@.*\./;
+        if (!emailRegex.test(formData.email)) {
+            setErrors(prev => ({
+                ...prev,
+                email: 'Please enter a valid email address'
+            }));
             return;
         }
 
-        setStatus('sending');
+        // Content validation for abusive messages
+        const contentError = validateContent(formData.message);
+        if (contentError) {
+            setErrors(prev => ({
+                ...prev,
+                message: contentError
+            }));
+            return;
+        }
+
         setIsLoading(true);
-        setCanSubmit(false);
 
         try {
             const response = await fetch('http://localhost:5000/submit', {
@@ -84,28 +63,28 @@ const Contact = () => {
                 body: JSON.stringify(formData)
             });
 
+            const data = await response.json();
+
             if (response.ok) {
                 setStatus('success');
-                resetForm();
-                // Reset submission ability after 1 minute
-                setTimeout(() => setCanSubmit(true), 60000);
+                setFormData({ name: '', email: '', message: '' });
+                alert('Message sent successfully!');
             } else {
-                throw new Error('Failed to send');
+                throw new Error(data.error || 'Failed to send message');
             }
         } catch (error) {
             console.error('Error:', error);
             setStatus('error');
+            alert(error.message);
+        } finally {
             setIsLoading(false);
-            // Reset submission ability after 30 seconds on error
-            setTimeout(() => setCanSubmit(true), 30000);
         }
     };
 
     return (
-        <div className='contact'>
+        <div className="contact">
             <h2>Contact Me</h2>
             <div className="contact-form">
-                <p>Get in touch...</p>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <input
@@ -114,11 +93,8 @@ const Contact = () => {
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="Your Name"
-                            maxLength={50}
                             required
-                            disabled={isLoading}
                         />
-                        {errors.name && <span className="error">{errors.name}</span>}
                     </div>
 
                     <div className="form-group">
@@ -128,11 +104,9 @@ const Contact = () => {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="Your Email"
-                            maxLength={100}
                             required
-                            disabled={isLoading}
                         />
-                        {errors.email && <span className="error">{errors.email}</span>}
+                        {errors.email && <p className="error-message">{errors.email}</p>}
                     </div>
 
                     <div className="form-group">
@@ -142,19 +116,16 @@ const Contact = () => {
                             onChange={handleChange}
                             placeholder="Your Message"
                             rows="5"
-                            maxLength={500}
                             required
-                            disabled={isLoading}
                         ></textarea>
-                        {errors.message && <span className="error">{errors.message}</span>}
-                        <span className="char-count">{formData.message.length}/500</span>
+                        {errors.message && <p className="error-message">{errors.message}</p>}
                     </div>
 
                     <button 
                         type="submit" 
-                        disabled={!canSubmit || Object.keys(errors).length > 0 || isLoading}
+                        disabled={isLoading}
                     >
-                        {status === 'sending' ? 'Sending...' : 'Send Message'}
+                        {isLoading ? 'Sending...' : 'Send Message'}
                     </button>
 
                     {status === 'success' && (
@@ -162,9 +133,6 @@ const Contact = () => {
                     )}
                     {status === 'error' && (
                         <p className="error-message">Failed to send message. Please try again.</p>
-                    )}
-                    {status === 'rate-limited' && (
-                        <p className="error-message">Please wait before sending another message.</p>
                     )}
                 </form>
             </div>
